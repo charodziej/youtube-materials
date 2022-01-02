@@ -130,3 +130,78 @@ class GitIntro(Slide):
                 lag_ratio=0.2,
             )
         )
+
+
+def create_commit_sequence(distances, color, location):
+    commits = [Dot(color=color)]
+    arrows = []
+    for dist in distances:
+        dot = Dot(color=color).next_to(commits[-1], direction=3 * dist * DOWN)
+        arrow = Line(commits[-1], dot, buff=SMALL_BUFF, color=color).add_tip(
+            tip_length=0.2
+        )
+        arrows.append(arrow)
+        commits.append(dot)
+    Group(*commits, *arrows).move_to(location)
+
+    return commits, arrows
+
+
+def connect_branches(commit_start, commit_end, color):
+    return CubicBezier(
+        commit_start.get_center() + (DOWN * 2 * SMALL_BUFF),
+        commit_start.get_center() + (DOWN * 0.6),
+        commit_end.get_center() + (UP * 0.6),
+        commit_end.get_center() + (UP * 2 * SMALL_BUFF),
+        color=color,
+    )
+
+
+def DelayAnimationGroup(*animations, delay=1):
+    return AnimationGroup(
+        Animation(Mobject(), run_time=delay),
+        AnimationGroup(*animations),
+        lag_ratio=1,
+    )
+
+
+class GitConcepts(Slide):
+    def construct(self):
+        commits1, arrows1 = create_commit_sequence(
+            [1, 1.5, 2.5, 1], BLUE, ORIGIN
+        )
+        commits2, arrows2 = create_commit_sequence([1, 1], RED, RIGHT)
+        commits3, arrows3 = create_commit_sequence(
+            [1.75], GREEN, LEFT + (1.0625 * DOWN)
+        )
+
+        connect = []
+        connect.append(connect_branches(commits1[1], commits2[0], RED))
+        connect.append(connect_branches(commits2[2], commits1[3], RED))
+
+        connect.append(connect_branches(commits1[2], commits3[0], GREEN))
+        connect.append(connect_branches(commits3[1], commits1[4], GREEN))
+
+        commits = [*commits1, *commits2, *commits3]
+        connectors = [*arrows1, *arrows2, *arrows3, *connect]
+
+        self.play(
+            AnimationGroup(
+                *[Create(commit) for commit in commits], lag_ratio=0.2
+            ),
+            AnimationGroup(
+                *[Create(conn) for conn in connectors], lag_ratio=0.2
+            ),
+        )
+
+        graph = Group(*commits, *connectors)
+
+        title = Text("Repozytorium").to_corner(LEFT + UP)
+        self.play(graph.animate.shift(4 * RIGHT), Write(title))
+        highlight_box = SurroundingRectangle(graph, buff=0.2)
+
+        paragraph = Paragraph("test", size).to_edge(LEFT, buff=1)
+
+        self.play(Create(highlight_box), Write(paragraph))
+
+        self.pause()
